@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .detect-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .file-drop-area { border: 2px dashed #ddd; border-radius: 8px; padding: 2rem; text-align: center; transition: border-color 0.3s ease; }
+    .file-drop-area.highlight { border-color: #007bff; }
+    .file-input { display: none; }
+    .file-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+    .file-label .icon { font-size: 2rem; }
+    .progress { height: 20px; margin: 1rem 0; background-color: #f5f5f5; border-radius: 4px; }
+    .progress-bar { transition: width 0.3s ease; }
+    .frames-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .frame-card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .result-card, .result-info-section, .frame-analysis { 
+        margin-top: 2rem; 
+        padding: 1.5rem; 
+        border: 1px solid #ddd; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+    }
+    .video-container { margin: 2rem 0; text-align: center; }
+    .responsive-video { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .upload-prompt { text-align: center; padding: 2rem; background-color: #f9f9f9; border-radius: 8px; }
+</style>
+
+<div class="detect-container">
+    <h2>DeepFake Detection</h2>
+    
+    <div class="upload-section">
+        <form method="post" action="/upload" enctype="multipart/form-data" id="upload-form">
+            <div class="file-drop-area">
+                <input type="file" name="file" id="upload-btn" accept="video/*" class="file-input">
+                <label for="upload-btn" class="file-label">
+                    <span class="icon">📁</span>
+                    <span class="text">Drop video or tap to upload</span>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    {% if video_path %}
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" alt="Video Feed" class="responsive-video">
+        </div>
+        <div class="analysis-controls text-center">
+            <form method="post" action="/analyze" id="analyze-form" class="d-inline">
+                <button type="submit" class="btn btn-primary">Analyze Video</button>
+            </form>
+        </div>
+
+        {% if result %}
+            <div class="result-card">
+                <h3>Detection Result</h3>
+                <p class="result-text">This video appears to be: <strong>{{ result }}</strong></p>
+                <div class="confidence-meter">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ confidence|default(0) }}%">
+                            {{ "%.1f"|format(confidence|default(0))}}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-info-section">
+                <h3>Analysis Breakdown</h3>
+                <div class="analysis-cards">
+                    <div class="metric-card">
+                        <h4>Face Detection Quality</h4>
+                        <p class="score">{{ face_quality|default(0)|float|round(1) }}%</p>
+                        <small>Based on facial features clarity and alignment</small>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Frame Consistency</h4>
+                        <p class="score">{{ frame_consistency|default(0)|float|round(1) }}%</p>
+                        <small>Based on temporal stability across frames</small>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Model Confidence</h4>
+                        <p class="score">{{ model_confidence|default(0)|float|round(1) }}%</p>
+                        <small>Based on deep learning analysis</small>
+                    </div>
+                </div>
+                <div class="detection-factors mt-4">
+                    <h4>Key Detection Factors:</h4>
+                    <ul>
+                        <li><strong>Face Quality:</strong> {{ face_quality_details|default('Not available') }}</li>
+                        <li><strong>Frame Analysis:</strong> {{ frame_analysis_details|default('Not available') }}</li>
+                        <li><strong>Deep Learning:</strong> {{ model_analysis_details|default('Not available') }}</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="frame-analysis">
+                <h3>Frame Analysis</h3>
+                <div class="frames-grid">
+                    {% for frame in frames %}
+                        <div class="frame-card">
+                            <img src="data:image/jpeg;base64,{{ frame | to_base64 }}" alt="Analyzed Frame" class="analyzed-frame">
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="upload-prompt">
+            <p>Upload a video to begin analysis</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+(() => {
+    const fileInput = document.querySelector('.file-input');
+    const uploadForm = document.getElementById('upload-form');
+    const dropArea = document.querySelector('.file-drop-area');
+
+    fileInput?.addEventListener('change', () => uploadForm.submit());
+
+    ['dragenter', 'dragover'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.add('highlight')));
+    ['dragleave', 'drop'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.remove('highlight')));
+    dropArea?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileInput.files = e.dataTransfer.files;
+        uploadForm.submit();
+    });
+})();
+</script>
+{% endblock %}

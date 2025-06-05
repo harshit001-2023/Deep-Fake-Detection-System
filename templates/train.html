@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="train-container">
+    <h2>Contribute to Training Dataset</h2>
+    
+    <div class="dataset-stats" style="margin-top: 2rem; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
+        <h3>Training Dataset</h3>
+        <p>Real Videos: <span id="real-count">{{ real_videos }}</span></p>
+        <p>Fake Videos: <span id="fake-count">{{ fake_videos }}</span></p>
+        <p>Total Videos: <span id="total-count">{{ real_videos + fake_videos }}</span></p>
+    </div>
+
+    <div class="upload-section">
+        <form id="uploadForm" class="upload-form">
+            <div class="file-drop-area">
+                <label for="file" class="file-label">
+                    <span class="icon">📁</span>
+                    <span class="text">Drop video file here or click to upload</span>
+                </label>
+                <input type="file" id="file" name="file" accept="video/*" required>
+            </div>
+            <div class="label-selection">
+                <h3>Is this video Real or Fake?</h3>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="label" id="real" value="real" required>
+                    <label class="btn btn-outline-success" for="real">Real</label>
+                    <input type="radio" class="btn-check" name="label" id="fake" value="fake">
+                    <label class="btn btn-outline-danger" for="fake">Fake</label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary submit-btn">Contribute Video</button>
+        </form>
+    </div>
+
+    <div class="training-status" style="display: none;">
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+        </div>
+        <p class="status-text">Processing video...</p>
+    </div>
+
+    <div class="previews" style="margin-top: 2rem;">
+        <h3>Latest Contributions</h3>
+        {% if latest_real %}
+            <p>Latest Real Video:</p>
+            <video width="320" controls>
+                <source src="{{ url_for('static', filename=latest_real) }}" type="video/mp4">
+            </video>
+        {% endif %}
+        {% if latest_fake %}
+            <p>Latest Fake Video:</p>
+            <video width="320" controls>
+                <source src="{{ url_for('static', filename=latest_fake) }}" type="video/mp4">
+            </video>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const statusDiv = document.querySelector('.training-status');
+    const progressBar = document.querySelector('.progress-bar');
+    const statusText = document.querySelector('.status-text');
+
+    statusDiv.style.display = 'block';
+    progressBar.style.width = '50%';
+    statusText.textContent = 'Uploading video...';
+
+    const response = await fetch('/train', { method: 'POST', body: formData });
+    const result = await response.json();
+
+    if (result.success) {
+        progressBar.style.width = '100%';
+        statusText.textContent = 'Video successfully contributed!';
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+            e.target.reset();
+            fetch('/dataset_stats').then(res => res.json()).then(data => {
+                document.getElementById('real-count').textContent = data.real_videos;
+                document.getElementById('fake-count').textContent = data.fake_videos;
+                document.getElementById('total-count').textContent = data.total_videos;
+            });
+            window.location.reload();  // Refresh to update previews
+        }, 2000);
+    } else {
+        statusText.textContent = `Error: ${result.error}`;
+        progressBar.classList.add('bg-danger');
+    }
+});
+
+const dropArea = document.querySelector('.file-drop-area');
+const fileInput = document.getElementById('file');
+
+['dragenter', 'dragover'].forEach(event => dropArea.addEventListener(event, () => dropArea.classList.add('highlight')));
+['dragleave', 'drop'].forEach(event => dropArea.addEventListener(event, () => dropArea.classList.remove('highlight')));
+dropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileInput.files = e.dataTransfer.files;
+});
+</script>
+{% endblock %}

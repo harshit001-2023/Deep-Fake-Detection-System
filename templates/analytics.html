@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .analytics-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .metric-card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .metric-value { font-size: 24px; font-weight: bold; color: #007bff; }
+    .graph-container { margin-bottom: 40px; }
+    .graph-container h3 { margin-bottom: 20px; }
+    .text-muted { color: #6c757d; }
+    .text-danger { color: #dc3545; }
+</style>
+
+<div class="analytics-container">
+    <h2>DeepFake Detection Analytics</h2>
+    
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Total Videos Analyzed</h3>
+            <p class="metric-value">{{ metrics.total_videos }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Average Confidence</h3>
+            <p class="metric-value">{{ metrics.avg_confidence }}</p>
+        </div>
+    </div>
+
+    <!-- Confidence Graph -->
+    <div class="graph-container">
+        <h3>Detection Confidence Trends</h3>
+        <div id="confidenceGraph" style="width: 100%; height: 400px;"></div>
+        {% if not confidence_graph %}
+            <p class="text-muted">No confidence data available yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Training History Graph -->
+    <div class="graph-container">
+        <h3>Training History - Accuracy</h3>
+        <div id="trainingHistoryGraph" style="width: 100%; height: 400px;"></div>
+        {% if not training_history_graph %}
+            <p class="text-muted">No training history available yet. Please run 'python train.py' to train the model.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confidence Graph
+    const confidenceGraphDiv = document.getElementById('confidenceGraph');
+    {% if confidence_graph %}
+        try {
+            const confidenceData = JSON.parse('{{ confidence_graph | safe }}');
+            Plotly.newPlot('confidenceGraph', confidenceData.data, confidenceData.layout)
+                .catch(error => {
+                    console.error('Error plotting confidence graph:', error);
+                    confidenceGraphDiv.innerHTML = '<p class="text-danger">Error loading confidence graph</p>';
+                });
+        } catch (error) {
+            console.error('Error parsing confidence data:', error);
+            confidenceGraphDiv.innerHTML = '<p class="text-danger">Error loading confidence graph</p>';
+        }
+    {% else %}
+        if (!confidenceGraphDiv.querySelector('.text-muted')) {
+            confidenceGraphDiv.innerHTML = '<p class="text-muted">No confidence data available yet.</p>';
+        }
+    {% endif %}
+
+    // Training History Graph
+    const trainingHistoryGraphDiv = document.getElementById('trainingHistoryGraph');
+    {% if training_history_graph %}
+        try {
+            const trainingHistoryData = JSON.parse('{{ training_history_graph | safe }}');
+            Plotly.newPlot('trainingHistoryGraph', trainingHistoryData.data, trainingHistoryData.layout)
+                .catch(error => {
+                    console.error('Error plotting training history graph:', error);
+                    trainingHistoryGraphDiv.innerHTML = '<p class="text-danger">Error loading training history graph</p>';
+                });
+        } catch (error) {
+            console.error('Error parsing training history data:', error);
+            trainingHistoryGraphDiv.innerHTML = '<p class="text-danger">Error loading training history graph</p>';
+        }
+    {% else %}
+        if (!trainingHistoryGraphDiv.querySelector('.text-muted')) {
+            trainingHistoryGraphDiv.innerHTML = '<p class="text-muted">No training history available yet. Please run \'python train.py\' to train the model.</p>';
+        }
+    {% endif %}
+});
+</script>
+{% endblock %}

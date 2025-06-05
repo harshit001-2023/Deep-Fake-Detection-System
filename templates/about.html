@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4 animate-title">About DeepFake Detection System</h2>
+    
+    <!-- Project Overview -->
+    <div class="card mb-4 animate-card">
+        <div class="card-body">
+            <h3>Project Overview</h3>
+            <p>
+                Developed by students at Sipna College of Engineering & Technology, Amravati, this project tackles the escalating threat of DeepFake media. Using cutting-edge AI, our system achieves a 95% accuracy on the Celeb-DF dataset, safeguarding digital media integrity for security and content verification.
+            </p>
+        </div>
+    </div>
+
+    <!-- Methodology with Diagram -->
+    <div class="card mb-4 animate-card">
+        <div class="card-body">
+            <h3>Methodology</h3>
+            <p>Our system integrates three core components:</p>
+            <ul>
+                <li><strong>MTCNN:</strong> Detects and crops faces with precision.</li>
+                <li><strong>MobileNetV2:</strong> Extracts spatial features, spotting artifacts like blending issues.</li>
+                <li><strong>LSTM:</strong> Analyzes temporal patterns to catch unnatural movements.</li>
+            </ul>
+            <p>Trained on 199 Celeb-DF videos (99 real, 100 fake) with 5 frames per video, we optimized thresholds from 0.5 to 0.18 for subtle DeepFake detection.</p>
+            <div class="text-center">
+                <img src="{{ url_for('static', filename='images/methodology_diagram.png') }}" 
+                     alt="Methodology Diagram" class="img-fluid methodology-img">
+                <p class="text-muted mt-2">Simplified workflow of our detection pipeline.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Features -->
+    <div class="card mb-4 animate-card">
+        <div class="card-body">
+            <h3>Key Features</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-box text-center">
+                        <span class="icon">⚡</span>
+                        <h5>Real-Time Detection</h5>
+                        <p>Processes videos swiftly for live applications.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-box text-center">
+                        <span class="icon">🎯</span>
+                        <h5>High Accuracy</h5>
+                        <p>Achieves 95% accuracy on Celeb-DF dataset.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-box text-center">
+                        <span class="icon">🛠️</span>
+                        <h5>User-Friendly</h5>
+                        <p>Flask-based UI for easy video analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team with Photos -->
+    <div class="card mb-4 animate-card">
+        <div class="card-body">
+            <h3>Our Team</h3>
+            <div class="row text-center">
+                {% for member in team %}
+                <div class="col-md-2 col-sm-4 mb-3">
+                    <img src="{{ url_for('static', filename='images/' + member.photo) }}" 
+                         alt="{{ member.name }}" class="team-photo rounded-circle">
+                    <p class="mt-2">{{ member.name }}</p>
+                </div>
+                {% endfor %}
+                <div class="col-md-2 col-sm-4 mb-3">
+                    <img src="{{ url_for('static', filename='images/mentor.jpg') }}" 
+                         alt="Dr. A. B. Deshmukh" class="team-photo rounded-circle">
+                    <p class="mt-2">Dr. A. B. Deshmukh<br><small>Mentor</small></p>
+                </div>
+            </div>
+            <p class="text-center">Department of Information Technology, Sipna College of Engineering & Technology, Amravati</p>
+        </div>
+    </div>
+
+    <!-- Project Timeline (Updated Dec 2024 - Mar 2025) -->
+    <div class="card mb-4 animate-card">
+        <div class="card-body">
+            <h3>Project Timeline</h3>
+            <ul class="timeline">
+                <li class="timeline-item">
+                    <span class="timeline-date">Dec 2024</span>
+                    <p>Project ideation, dataset selection (Celeb-DF), and initial setup.</p>
+                </li>
+                <li class="timeline-item">
+                    <span class="timeline-date">Jan 2025</span>
+                    <p>Model development with MobileNetV2 and LSTM, early training.</p>
+                </li>
+                <li class="timeline-item">
+                    <span class="timeline-date">Feb 2025</span>
+                    <p>Training completion, threshold optimization (95% accuracy achieved).</p>
+                </li>
+                <li class="timeline-item">
+                    <span class="timeline-date">Mar 2025</span>
+                    <p>Flask UI deployment, final testing, and report submission.</p>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Learn More -->
+    <div class="card animate-card">
+        <div class="card-body text-center">
+            <h3>Learn More</h3>
+            <p>
+                Part of our Bachelor of Engineering in Information Technology at Sant Gadge Baba Amravati University, completed in 2024-25. Try it out on the <a href="/detect">Detect</a> page!
+            </p>
+            <a href="/detect" class="btn btn-primary mt-3">Start Detection</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple animation on scroll
+    document.addEventListener('DOMContentLoaded', () => {
+        const elements = document.querySelectorAll('.animate-card, .animate-title');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        elements.forEach(el => observer.observe(el));
+    });
+</script>
+{% endblock %}

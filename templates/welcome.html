@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to DeepFake Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .start-button {
+            display: inline-block;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin: 20px 0;
+        }
+
+        .start-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <h1>Welcome to DeepFake Detector</h1>
+        <a href="/detect" class="start-button">Start Detection</a>
+        <p class="abstract">This project uses advanced machine learning techniques, including MobileNetV2 and LSTM, to detect DeepFake videos with 95% accuracy. It analyzes facial features and temporal patterns to distinguish real from manipulated content, providing a powerful tool for video authenticity verification.</p>
+    </div>
+</body>
+</html>

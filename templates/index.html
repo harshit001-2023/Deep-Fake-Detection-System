@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .index-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    .welcome-card { text-align: center; padding: 3rem; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); margin-bottom: 4rem; }
+    .start-button { display: inline-block; padding: 15px 30px; font-size: 1.2rem; font-weight: bold; color: white; background-color: #007bff; border: none; border-radius: 25px; cursor: pointer; transition: all 0.3s ease; text-decoration: none; }
+    .start-button:hover { background-color: #0056b3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+    .start-button:active { transform: translateY(0); }
+    .upload-section { padding: 2rem; border: 1px solid #ddd; border-radius: 8px; background-color: #f9f9f9; }
+    .file-drop-area { border: 2px dashed #ddd; border-radius: 8px; padding: 2rem; text-align: center; transition: border-color 0.3s ease; }
+    .file-drop-area.highlight { border-color: #007bff; }
+    .file-input { display: none; }
+    .file-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+    .file-label .icon { font-size: 2rem; }
+    .video-preview { margin-top: 2rem; text-align: center; }
+    .responsive-video { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .analysis-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .loader { border: 12px solid #f3f3f3; border-top: 12px solid #007bff; border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .analysis-info { margin-top: 1rem; text-align: center; }
+    .result-card, .result-info-section, .frame-analysis { margin-top: 2rem; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .progress { height: 20px; margin: 1rem 0; background-color: #f5f5f5; border-radius: 4px; }
+    .progress-bar { transition: width 0.3s ease; }
+    .frames-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+    .frame-card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .hidden { display: none; }
+    .frozen { pointer-events: none; opacity: 0.5; }
+</style>
+
+<div class="index-container" id="main-content">
+    <!-- Welcome Section -->
+    <div class="welcome-card {% if video_path %}hidden{% endif %}" id="welcome">
+        <h1>Welcome to DeepFake Detector</h1>
+        <p class="abstract">This project uses advanced machine learning techniques, including MobileNetV2 and LSTM, to detect DeepFake videos with 95% accuracy. It analyzes facial features and temporal patterns to distinguish real from manipulated content.</p>
+        <button class="start-button" onclick="scrollToUpload()">Start Detection</button>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section {% if video_path %}hidden{% endif %}" id="upload">
+        <h2>Upload Video for Analysis</h2>
+        <form method="post" action="/upload" enctype="multipart/form-data" id="upload-form">
+            <div class="file-drop-area">
+                <input type="file" name="file" id="upload-btn" accept="video/*" class="file-input">
+                <label for="upload-btn" class="file-label">
+                    <span class="icon">📁</span>
+                    <span class="text">Drop video or tap to upload</span>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    {% if video_path %}
+        <div class="video-preview">
+            <img src="{{ url_for('video_feed') }}" alt="Video Preview" class="responsive-video">
+            <div class="analysis-controls">
+                <form method="post" action="/analyze" id="analyze-form" class="d-inline">
+                    <button type="submit" class="btn btn-primary" id="analyze-btn">Analyze Video</button>
+                </form>
+                <button class="btn btn-danger" onclick="cancelUpload()">Cancel Upload</button>
+            </div>
+        </div>
+
+        {% if result %}
+            <div class="result-card">
+                <h3>Detection Result</h3>
+                <p class="result-text">This video appears to be: <strong>{{ result }}</strong></p>
+                <div class="confidence-meter">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ confidence|default(0) }}%">
+                            {{ "%.1f"|format(confidence|default(0))}}%
+                        </div>
+                    </div>
+                </div>
+                <div class="analysis-info">
+                    <p>Analysis Time: <span id="analysis-time">{{ analysis_time|default('N/A') }}</span></p>
+                </div>
+            </div>
+
+            <div class="result-info-section">
+                <h3>Analysis Breakdown</h3>
+                <div class="analysis-cards">
+                    <div class="metric-card">
+                        <h4>Face Detection Quality</h4>
+                        <p class="score">{{ face_quality|default(0)|float|round(1) }}%</p>
+                        <small>Based on facial features clarity and alignment</small>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Frame Consistency</h4>
+                        <p class="score">{{ frame_consistency|default(0)|float|round(1) }}%</p>
+                        <small>Based on temporal stability across frames</small>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Model Confidence</h4>
+                        <p class="score">{{ model_confidence|default(0)|float|round(1) }}%</p>
+                        <small>Based on deep learning analysis</small>
+                    </div>
+                </div>
+                <div class="detection-factors mt-4">
+                    <h4>Key Detection Factors:</h4>
+                    <ul>
+                        <li><strong>Face Quality:</strong> {{ face_quality_details|default('Not available') }}</li>
+                        <li><strong>Frame Analysis:</strong> {{ frame_analysis_details|default('Not available') }}</li>
+                        <li><strong>Deep Learning:</strong> {{ model_analysis_details|default('Not available') }}</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="frame-analysis">
+                <h3>Frame Analysis</h3>
+                <div class="frames-grid">
+                    {% for frame in frames %}
+                        <div class="frame-card">
+                            <img src="data:image/jpeg;base64,{{ frame | to_base64 }}" alt="Analyzed Frame" class="analyzed-frame">
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Loader Overlay -->
+<div class="loader-overlay" id="loader">
+    <div class="loader"></div>
+</div>
+
+<script>
+function scrollToUpload() {
+    document.getElementById('upload').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelUpload() {
+    fetch('/cancel_upload', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            }
+        });
+}
+
+(() => {
+    const fileInput = document.querySelector('.file-input');
+    const uploadForm = document.getElementById('upload-form');
+    const dropArea = document.querySelector('.file-drop-area');
+    const analyzeForm = document.getElementById('analyze-form');
+    const loader = document.getElementById('loader');
+    const mainContent = document.getElementById('main-content');
+
+    fileInput?.addEventListener('change', () => uploadForm.submit());
+
+    ['dragenter', 'dragover'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.add('highlight')));
+    ['dragleave', 'drop'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.remove('highlight')));
+    dropArea?.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileInput.files = e.dataTransfer.files;
+        uploadForm.submit();
+    });
+
+    analyzeForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        loader.style.display = 'flex'; // Show loader
+        mainContent.classList.add('frozen'); // Freeze screen
+        const startTime = Date.now();
+
+        fetch('/analyze', {
+            method: 'POST',
+            body: new FormData(analyzeForm)
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.open();
+            document.write(html);
+            document.close();
+            const endTime = Date.now();
+            const analysisTime = ((endTime - startTime) / 1000).toFixed(2) + ' seconds';
+            document.getElementById('analysis-time').textContent = analysisTime;
+            loader.style.display = 'none'; // Hide loader
+            document.getElementById('main-content').classList.remove('frozen'); // Unfreeze screen
+        })
+        .catch(error => {
+            console.error('Analysis error:', error);
+            loader.style.display = 'none';
+            mainContent.classList.remove('frozen');
+        });
+    });
+})();
+</script>
+{% endblock %}
