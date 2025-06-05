@@ -64,4 +64,5 @@ print(f"Average probability of video being fake: {video_result:.2f}")
 ## Note
 This implementation uses transfer learning with MobileNetV2 for efficient detection. The model needs to be trained with a dataset of real and fake images/videos for optimal performance.
 
-![Welcome Pange](static/images/Screenshot (187).png)
+![Welcome Pange](static/images/Screenshot(187).png)
+<img src="static/images/Screenshot(187).png" alt="Welocome page" width="200"/>
