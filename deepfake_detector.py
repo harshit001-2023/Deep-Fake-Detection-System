@@ -1,20 +1,31 @@
 import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, load_model
 import cv2
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+from mtcnn import MTCNN
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load the trained deepfake detection model
-model = load_model('deepfake_detector_advanced_v2.h5')
+try:
+    model = load_model('deepfake_detector_advanced_v2.h5')
+except Exception as e:
+    logger.warning(f"Could not load model: {e}")
+    model = None
 
 # Initialize face detector
-face_detector = MTCNN()
-
-# Initialize DeepFace for face recognition
-from deepface import DeepFace
+try:
+    face_detector = MTCNN()
+except Exception as e:
+    logger.warning(f"Could not initialize MTCNN: {e}")
+    face_detector = None
 
 class DeepFakeDetector:
     def __init__(self):
@@ -53,18 +64,17 @@ class DeepFakeDetector:
     def detect_faces(self, image_path):
         # Detect faces using MTCNN
         try:
-            if detector is None:
-                detector = MTCNN()
+            if face_detector is None:
+                logger.error("MTCNN detector not initialized")
+                return []
             
             # Load and preprocess the image
             img = Image.open(image_path)
             img = img.resize((224, 224))
             img_array = np.array(img)
-            img_array = img_array / 255.0
-            img_array = np.expand_dims(img_array, axis=0)
             
             # Detect faces
-            faces = detector.detect_faces(img_array)
+            faces = face_detector.detect_faces(img_array)
             return faces
         except Exception as e:
             logger.error(f"Failed to detect faces: {e}")

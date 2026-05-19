@@ -7,112 +7,113 @@
     .file-drop-area { border: 2px dashed #ddd; border-radius: 8px; padding: 2rem; text-align: center; transition: border-color 0.3s ease; }
     .file-drop-area.highlight { border-color: #007bff; }
     .file-input { display: none; }
-    .file-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-    .file-label .icon { font-size: 2rem; }
+    .file-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; font-weight: 600; color: #007bff; }
+    .file-label .icon { font-size: 2.5rem; }
     .video-preview { margin-top: 2rem; text-align: center; }
-    .responsive-video { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
-    .analysis-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+    .responsive-video { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+    .analysis-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap; }
     .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
-    .loader { border: 12px solid #f3f3f3; border-top: 12px solid #007bff; border-radius: 50%; width: 80px; height: 80px; animation: spin 1s linear infinite; }
+    .loader-box { background: white; padding: 2rem; border-radius: 8px; text-align: center; }
+    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .analysis-info { margin-top: 1rem; text-align: center; }
-    .result-card, .result-info-section, .frame-analysis { margin-top: 2rem; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
-    .progress { height: 20px; margin: 1rem 0; background-color: #f5f5f5; border-radius: 4px; }
-    .progress-bar { transition: width 0.3s ease; }
+    .analysis-info { margin-top: 1rem; text-align: center; font-size: 0.95rem; }
+    .result-card, .result-info-section, .frame-analysis { margin-top: 2rem; padding: 1.5rem; border: 1px solid #ddd; border-radius: 8px; background: #fff; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+    .progress { height: 20px; margin: 1rem 0; background-color: #f5f5f5; border-radius: 4px; overflow: hidden; }
+    .progress-bar { height: 100%; background-color: #007bff; transition: width 0.3s ease; }
     .frames-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
-    .frame-card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .frame-card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; }
+    .frame-card img { width: 100%; height: auto; }
+    .metric-card { margin-bottom: 1rem; padding: 1rem; background: #f9f9f9; border-radius: 8px; }
+    .metric-card h4 { margin: 0 0 0.5rem 0; font-size: 1rem; }
+    .metric-card .score { font-size: 1.8rem; font-weight: bold; color: #007bff; }
     .hidden { display: none; }
-    .frozen { pointer-events: none; opacity: 0.5; }
+    .frozen { pointer-events: none; opacity: 0.6; }
 </style>
 
 <div class="upload-container" id="main-content">
-    <!-- Upload Section -->
     <div class="upload-section {% if video_path %}hidden{% endif %}" id="upload">
         <h2>Upload Video for Analysis</h2>
         <form method="post" action="/upload" enctype="multipart/form-data" id="upload-form">
-            <div class="file-drop-area">
+            <div class="file-drop-area" id="drop-area">
                 <input type="file" name="file" id="upload-btn" accept="video/*" class="file-input">
                 <label for="upload-btn" class="file-label">
                     <span class="icon">📁</span>
-                    <span class="text">Drop video or tap to upload</span>
+                    <span class="text">Drop video here or click to upload</span>
                 </label>
             </div>
         </form>
     </div>
 
     {% if video_path %}
-        <div class="video-preview">
-            <img src="{{ url_for('video_feed') }}" alt="Video Preview" class="responsive-video">
-            <div class="analysis-controls">
-                <form method="post" action="/analyze" id="analyze-form" class="d-inline">
-                    <button type="submit" class="btn btn-primary" id="analyze-btn">Analyze Video</button>
-                </form>
-                <button class="btn btn-danger" onclick="cancelUpload()">Cancel Upload</button>
+    <div class="video-preview">
+        <h2>Video Preview</h2>
+        <img src="{{ url_for('video_feed') }}" alt="Video Preview" class="responsive-video">
+        <div class="analysis-controls">
+            <form method="post" action="/analyze" id="analyze-form" style="display: inline;">
+                <button type="submit" class="btn btn-primary">Analyze Video</button>
+            </form>
+            <button class="btn btn-secondary" onclick="cancelUpload()">Cancel</button>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="result-card">
+        <h3>Detection Result</h3>
+        <p style="font-size: 1.2rem; margin: 1rem 0;">
+            This video is: <strong>{{ result }}</strong>
+        </p>
+        <div class="progress">
+            <div class="progress-bar" style="width: {{ confidence|default(0) }}%">
+                {{ "%.1f"|format(confidence|default(0)) }}%
             </div>
         </div>
+        <div class="analysis-info">
+            <p>Analysis took: <strong>{{ analysis_time|default('N/A') }}</strong></p>
+        </div>
+    </div>
 
-        {% if result %}
-            <div class="result-card">
-                <h3>Detection Result</h3>
-                <p class="result-text">This video appears to be: <strong>{{ result }}</strong></p>
-                <div class="confidence-meter">
-                    <div class="progress">
-                        <div class="progress-bar" style="width: {{ confidence|default(0) }}%">
-                            {{ "%.1f"|format(confidence|default(0))}}%
-                        </div>
-                    </div>
-                </div>
-                <div class="analysis-info">
-                    <p>Analysis Time: <span id="analysis-time">{{ analysis_time|default('N/A') }}</span></p>
-                </div>
+    <div class="result-info-section">
+        <h3>Analysis Details</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+            <div class="metric-card">
+                <h4>Face Detection Quality</h4>
+                <p class="score">{{ "%.1f"|format(face_quality|default(0)) }}%</p>
+                <small>{{ face_quality_details|default('N/A') }}</small>
             </div>
+            <div class="metric-card">
+                <h4>Frame Consistency</h4>
+                <p class="score">{{ "%.1f"|format(frame_consistency|default(0)) }}%</p>
+                <small>{{ frame_analysis_details|default('N/A') }}</small>
+            </div>
+            <div class="metric-card">
+                <h4>Model Confidence</h4>
+                <p class="score">{{ "%.1f"|format(model_confidence|default(0)) }}%</p>
+                <small>{{ model_analysis_details|default('N/A') }}</small>
+            </div>
+        </div>
+    </div>
 
-            <div class="result-info-section">
-                <h3>Analysis Breakdown</h3>
-                <div class="analysis-cards">
-                    <div class="metric-card">
-                        <h4>Face Detection Quality</h4>
-                        <p class="score">{{ face_quality|default(0)|float|round(1) }}%</p>
-                        <small>Based on facial features clarity and alignment</small>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Frame Consistency</h4>
-                        <p class="score">{{ frame_consistency|default(0)|float|round(1) }}%</p>
-                        <small>Based on temporal stability across frames</small>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Model Confidence</h4>
-                        <p class="score">{{ model_confidence|default(0)|float|round(1) }}%</p>
-                        <small>Based on deep learning analysis</small>
-                    </div>
-                </div>
-                <div class="detection-factors mt-4">
-                    <h4>Key Detection Factors:</h4>
-                    <ul>
-                        <li><strong>Face Quality:</strong> {{ face_quality_details|default('Not available') }}</li>
-                        <li><strong>Frame Analysis:</strong> {{ frame_analysis_details|default('Not available') }}</li>
-                        <li><strong>Deep Learning:</strong> {{ model_analysis_details|default('Not available') }}</li>
-                    </ul>
-                </div>
+    {% if frames %}
+    <div class="frame-analysis">
+        <h3>Analyzed Frames</h3>
+        <div class="frames-grid">
+            {% for frame in frames %}
+            <div class="frame-card">
+                <img src="data:image/jpeg;base64,{{ frame | to_base64 }}" alt="Frame">
             </div>
-
-            <div class="frame-analysis">
-                <h3>Frame Analysis</h3>
-                <div class="frames-grid">
-                    {% for frame in frames %}
-                        <div class="frame-card">
-                            <img src="data:image/jpeg;base64,{{ frame | to_base64 }}" alt="Analyzed Frame" class="analyzed-frame">
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
     {% endif %}
 </div>
 
-<!-- Loader Overlay -->
 <div class="loader-overlay" id="loader">
-    <div class="loader"></div>
+    <div class="loader-box">
+        <div class="loader"></div>
+        <p>Analyzing video... Please wait</p>
+    </div>
 </div>
 
 <script>
@@ -121,56 +122,69 @@ function cancelUpload() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                window.location.href = '/upload'; // Redirect back to upload page
+                window.location.href = '/upload';
             }
         });
 }
 
-(() => {
+(function() {
     const fileInput = document.querySelector('.file-input');
     const uploadForm = document.getElementById('upload-form');
-    const dropArea = document.querySelector('.file-drop-area');
+    const dropArea = document.getElementById('drop-area');
     const analyzeForm = document.getElementById('analyze-form');
     const loader = document.getElementById('loader');
     const mainContent = document.getElementById('main-content');
 
-    fileInput?.addEventListener('change', () => uploadForm.submit());
+    if (fileInput) {
+        fileInput.addEventListener('change', () => uploadForm.submit());
+    }
 
-    ['dragenter', 'dragover'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.add('highlight')));
-    ['dragleave', 'drop'].forEach(event => dropArea?.addEventListener(event, () => dropArea.classList.remove('highlight')));
-    dropArea?.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileInput.files = e.dataTransfer.files;
-        uploadForm.submit();
-    });
-
-    analyzeForm?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        loader.style.display = 'flex'; // Show loader
-        mainContent.classList.add('frozen'); // Freeze screen
-        const startTime = Date.now();
-
-        fetch('/analyze', {
-            method: 'POST',
-            body: new FormData(analyzeForm)
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.open();
-            document.write(html);
-            document.close();
-            const endTime = Date.now();
-            const analysisTime = ((endTime - startTime) / 1000).toFixed(2) + ' seconds';
-            document.getElementById('analysis-time').textContent = analysisTime;
-            loader.style.display = 'none'; // Hide loader
-            document.getElementById('main-content').classList.remove('frozen'); // Unfreeze screen
-        })
-        .catch(error => {
-            console.error('Analysis error:', error);
-            loader.style.display = 'none';
-            mainContent.classList.remove('frozen');
+    if (dropArea) {
+        ['dragenter', 'dragover'].forEach(event => {
+            dropArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropArea.classList.add('highlight');
+            });
         });
-    });
+
+        ['dragleave', 'drop'].forEach(event => {
+            dropArea.addEventListener(event, (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('highlight');
+            });
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInput.files = e.dataTransfer.files;
+            uploadForm.submit();
+        });
+    }
+
+    if (analyzeForm) {
+        analyzeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            loader.style.display = 'flex';
+            mainContent.classList.add('frozen');
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: new FormData(analyzeForm)
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loader.style.display = 'none';
+                mainContent.classList.remove('frozen');
+                alert('Analysis failed. Please try again.');
+            });
+        });
+    }
 })();
 </script>
 {% endblock %}

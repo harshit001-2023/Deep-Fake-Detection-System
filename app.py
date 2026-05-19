@@ -14,7 +14,6 @@ from datetime import datetime
 import logging
 from threading import Thread
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,9 @@ def load_analysis_data():
         with open('analysis_data.json', 'r') as f:
             data = json.load(f)
             analysis_data = {'confidence_scores': data.get('confidence_scores', []), 
-                             'detection_metrics': data.get('detection_metrics', {})}
+                             'detection_metrics': data.get('detection_metrics', {}), 'user_feedback': []}
     except FileNotFoundError:
-        analysis_data = {'confidence_scores': [], 'detection_metrics': {}}
+        analysis_data = {'confidence_scores': [], 'detection_metrics': {}, 'user_feedback': []}
 
 def initialize_app():
     global detector, model
@@ -82,26 +81,42 @@ app.jinja_env.filters['to_base64'] = to_base64
 
 @app.route('/')
 def index():
-    if not model:
-        flash("Warning: Model not fully initialized.", "warning")
     return render_template('index.html')
 
-# @app.route('/detect')
-# def detect():
-#     session.pop('video_path', None)
-#     if not model:
-#         flash("Warning: Model not initialized.", "warning")
-#     return render_template('detect.html')
-
-@app.route('/train_page')
-def train_page():
-    stats = get_dataset_stats()
-    return render_template('train.html', real_videos=stats['real_videos'], fake_videos=stats['fake_videos'])
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_page():
+    if request.method == 'POST':
+        if not model:
+            flash("Error: Model not initialized.", "error")
+            return render_template('upload.html')
+            
+        if 'file' not in request.files:
+            flash("No file uploaded.", "error")
+            return render_template('upload.html')
+        
+        file = request.files['file']
+        if not file.filename:
+            flash("No file selected.", "error")
+            return render_template('upload.html')
+            
+        if not file.filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            flash("Invalid format. Use MP4, AVI, MOV, or MKV.", "error")
+            return render_template('upload.html')
+            
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        secure_filename = f"{timestamp}_{os.path.splitext(file.filename)[0][:50]}{os.path.splitext(file.filename)[1]}"
+        video_path = os.path.join("uploads", secure_filename)
+        
+        file.save(video_path)
+        session['video_path'] = video_path
+        flash("Video uploaded successfully.", "success")
+        return render_template('upload.html', video_path=video_path)
+    
+    video_path = session.get('video_path')
+    return render_template('upload.html', video_path=video_path)
 
 @app.route('/about')
 def about():
-    if not model:
-        flash("Warning: Model not fully initialized.", "warning")
     team = [
         {'name': 'Achal S. Surandase', 'photo': 'achal.jpg'},
         {'name': 'Sanika N. Tole', 'photo': 'sanika.jpg'},
@@ -110,41 +125,6 @@ def about():
         {'name': 'Harshit M. Pande', 'photo': 'harshit.jpg'}
     ]
     return render_template('about.html', team=team)
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if not model:
-        flash("Error: Model not initialized.", "error")
-        return render_template('upload.html')
-        
-    if 'file' not in request.files:
-        flash("No file uploaded.", "error")
-        return render_template('upload.html')
-    
-    file = request.files['file']
-    if not file.filename:
-        flash("No file selected.", "error")
-        return render_template('upload.html')
-        
-    if not file.filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
-        flash("Invalid format. Use MP4, AVI, MOV, or MKV.", "error")
-        return render_template('upload.html')
-        
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    secure_filename = f"{timestamp}_{os.path.splitext(file.filename)[0][:50]}{os.path.splitext(file.filename)[1]}"
-    video_path = os.path.join("uploads", secure_filename)
-    
-    file.save(video_path)
-    session['video_path'] = video_path
-    flash("Video uploaded successfully.", "success")
-    return render_template('upload.html', video_path=video_path)
-
-@app.route('/upload', methods=['GET'])
-def upload_page():
-    if not model:
-        flash("Warning: Model not initialized.", "warning")
-    video_path = session.get('video_path')
-    return render_template('upload.html', video_path=video_path)
 
 @app.route('/cancel_upload', methods=['POST'])
 def cancel_upload():
@@ -164,13 +144,13 @@ def analyze():
         flash("No video loaded.", "error")
         return render_template('upload.html')
 
-    start_time = datetime.now()  # Start timing
+    start_time = datetime.now()
     frames = process_video(video_path)
     if frames is None:
         flash("Error: Could not process video frames.", "error")
         return render_template('upload.html', video_path=video_path)
 
-    result, confidence = predict_deepfake(video_path, model)
+    result, confidence = predict_deepfake(video_path, model, frames=frames)
     if result.startswith("Error"):
         flash(f"Error during analysis: {result}", "error")
         return render_template('upload.html', video_path=video_path)
@@ -195,10 +175,9 @@ def analyze():
         'timestamp': datetime.now()
     })
     save_analysis_data()
-    logger.info(f"Analysis data updated: {analysis_data['confidence_scores'][-1]}")
 
-    end_time = datetime.now()  # End timing
-    analysis_time = (end_time - start_time).total_seconds()  # Calculate time in seconds
+    end_time = datetime.now()
+    analysis_time = (end_time - start_time).total_seconds()
 
     flash("Analysis completed.", "success")
     return render_template('upload.html', 
@@ -213,7 +192,7 @@ def analyze():
                          frame_analysis_details=frame_analysis_details,
                          model_analysis_details=model_analysis_details,
                          analysis_time=f"{analysis_time:.2f} seconds")
-                         
+
 @app.route('/video_feed')
 def video_feed():
     video_path = session.get('video_path')
@@ -224,59 +203,15 @@ def video_feed():
 @app.route('/analytics')
 def analytics():
     confidence_graph = create_confidence_graph()
-    training_history_graph = create_training_history_graph()
     detection_metrics = get_detection_metrics()
     return render_template('analytics.html', 
                           confidence_graph=confidence_graph,
-                          training_history_graph=training_history_graph,
                           metrics=detection_metrics)
 
-def retrain_model_async():
-    global model
-    if train_model(incremental=True):
-        logger.info("Model retrained successfully")
-        model = build_model(load_saved=True)  # Reload updated model
-    else:
-        logger.error("Retraining failed")
-
-def load_training_history():
-    history_path = 'models/training_history.json'
-    try:
-        with open(history_path, 'r') as f:
-            data = json.load(f)
-            logger.info(f"Loaded training history from {history_path}")
-            return data
-    except FileNotFoundError:
-        logger.warning(f"Training history file not found at {history_path}")
-        return {'accuracy': [], 'val_accuracy': [], 'loss': [], 'val_loss': []}
-    except json.JSONDecodeError as e:
-        logger.error(f"Error decoding training history JSON: {e}")
-        return {'accuracy': [], 'val_accuracy': [], 'loss': [], 'val_loss': []}
-
-def create_training_history_graph():
-    history = load_training_history()
-    if not history.get('accuracy') or len(history['accuracy']) == 0:
-        logger.info("No training history data available to plot.")
-        return None
-    
-    epochs = list(range(1, len(history['accuracy']) + 1))
-    df = pd.DataFrame({
-        'Epoch': epochs,
-        'Training Accuracy': history['accuracy'],
-        'Validation Accuracy': history['val_accuracy']
-    })
-    fig = px.line(df, x='Epoch', y=['Training Accuracy', 'Validation Accuracy'], 
-                  title='Training History - Accuracy',
-                  labels={'value': 'Accuracy', 'variable': 'Metric'})
-    fig.update_layout(
-        width=800, 
-        height=400,
-        plot_bgcolor='white',  # Ensure visibility on light backgrounds
-        paper_bgcolor='white',
-        font=dict(color='black')
-    )
-    fig.update_traces(line=dict(width=2))  # Thicker lines for clarity
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+@app.route('/train_page')
+def train_page():
+    stats = get_dataset_stats()
+    return render_template('train.html', real_videos=stats['real_videos'], fake_videos=stats['fake_videos'])
 
 @app.route('/train', methods=['POST'])
 def train():
@@ -303,12 +238,7 @@ def train():
     
     file.save(video_path)
     logger.info(f"Training video contributed: {video_path}, Label: {label}")
-
-# Check dataset size and retrain
-    stats = get_dataset_stats()
-    if stats['total_videos'] % 5 == 0:  # Retrain every 20 new videos
-        Thread(target=retrain_model_async).start()
-
+    
     return jsonify({'success': True})
 
 @app.route('/dataset_stats')
@@ -344,13 +274,6 @@ def create_confidence_graph():
     fig = px.line(df, x='timestamp', y='confidence', title='Confidence Scores Over Time')
     return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
-def create_feedback_graph():
-    if not analysis_data['user_feedback']:
-        return None
-    df = pd.DataFrame(analysis_data['user_feedback'])
-    fig = px.pie(df, names='label', title='User Feedback Distribution')
-    return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-
 def get_detection_metrics():
     try:
         total_videos = len(analysis_data['confidence_scores'])
@@ -366,3 +289,5 @@ def get_detection_metrics():
 if __name__ == '__main__':
     if initialize_app():
         app.run(debug=False, host='0.0.0.0', port=5000)
+    else:
+        logger.error("Failed to initialize app")

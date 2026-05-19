@@ -70,29 +70,39 @@ def build_model(load_saved=True):
         logger.error(f"Error building/loading model: {e}")
         return None
 
-def process_video(video_path):
+def process_video(video_path, progress_callback=None):
     """Process video with improved error handling and logging"""
     try:
         if not initialize_detector():
+            if progress_callback:
+                progress_callback(0, 'Failed to initialize face detector')
             return None
 
         logger.info(f"Processing video: {os.path.basename(video_path)}")
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             logger.error(f"Could not open video: {video_path}")
+            if progress_callback:
+                progress_callback(0, 'Could not open video file')
             return None
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if total_frames < 5:
             logger.warning(f"Video too short (frames: {total_frames})")
+            if progress_callback:
+                progress_callback(0, 'Video is too short for analysis')
             return None
 
         frames = []
         frame_indices = np.linspace(0, total_frames-1, 5, dtype=int)
         
-        for idx in frame_indices:
+        for idx_num, idx in enumerate(frame_indices, start=1):
             cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
             ret, frame = cap.read()
+            progress_percent = 10 + int((idx_num / len(frame_indices)) * 50)
+            if progress_callback:
+                progress_callback(progress_percent, f'Processing frame {idx_num} of {len(frame_indices)}')
+
             if not ret:
                 logger.warning(f"Could not read frame {idx}")
                 continue
@@ -129,13 +139,19 @@ def process_video(video_path):
         cap.release()
         
         if len(frames) == 5:
+            if progress_callback:
+                progress_callback(65, 'Video frames prepared for prediction')
             return np.array(frames)
         else:
             logger.warning(f"Insufficient frames processed: {len(frames)}/5")
+            if progress_callback:
+                progress_callback(0, 'Insufficient frames detected')
             return None
             
     except Exception as e:
         logger.error(f"Error processing video: {e}")
+        if progress_callback:
+            progress_callback(0, 'Error processing video')
         return None
 
 def load_videos(folder_path, label, max_videos=50):
@@ -177,37 +193,43 @@ def load_videos(folder_path, label, max_videos=50):
         logger.error(f"Error loading videos from {folder_path}: {e}")
         return videos, labels
 
-def predict_deepfake(video_path, model):
+def predict_deepfake(video_path, model, frames=None, progress_callback=None):
     """Predict with improved error handling and validation"""
     try:
-        if not os.path.exists(video_path):
-            logger.error(f"Video file not found: {video_path}")
-            return "Error: Video file not found", 0
-            
-        if model is None:
-            logger.error("Model not initialized")
-            return "Error: Model not initialized", 0
-            
-        frames = process_video(video_path)
+        if frames is None:
+            if progress_callback:
+                progress_callback(65, 'Extracting frames for prediction')
+            frames = process_video(video_path, progress_callback=progress_callback)
+
         if frames is None:
             logger.error("Could not process video frames")
             return "Error: Could not process video", 0
-            
+
+        if model is None:
+            logger.error("Model not initialized")
+            return "Error: Model not initialized", 0
+
+        if progress_callback:
+            progress_callback(75, 'Running sequence prediction')
+
         # Stack frames into a sequence
-        sequence = np.array(frames)
-        sequence = np.expand_dims(sequence, axis=0)  # Add batch dimension
-        
+        sequence = np.expand_dims(np.array(frames), axis=0)
         prediction = model.predict(sequence, verbose=0)[0][0]
         logger.info(f"Raw prediction value: {prediction}")
-        
+
         result = "Real" if prediction > 0.5 else "Fake"
         confidence = prediction if prediction > 0.5 else (1 - prediction)
         confidence = float(confidence * 100)  # Convert to percentage
-        
+
+        if progress_callback:
+            progress_callback(90, 'Prediction complete')
+
         logger.info(f"Final prediction: {result} with {confidence:.2f}% confidence")
         return result, confidence
     except Exception as e:
         logger.error(f"Error in prediction: {e}")
+        if progress_callback:
+            progress_callback(0, 'Error during prediction')
         return "Error: An unexpected error occurred", 0
 
 def train_model(incremental=True):

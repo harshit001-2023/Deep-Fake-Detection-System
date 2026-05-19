@@ -1,52 +1,59 @@
 # DeepFake Detection Project
 
-This project implements a deep learning-based DeepFake detection system using MobileNetV2 architecture.
+A Flask-based DeepFake detection application that analyzes uploaded videos using MTCNN face detection and a deep learning model built with MobileNetV2 and LSTM.
 
-## Features
-- Image-based DeepFake detection
-- Video analysis capabilities
-- Pre-trained MobileNetV2 base model
-- Easy-to-use Python interface
+## What this project does
+- Shows a welcome page first, then moves to the upload page after clicking **Start Detecting**.
+- Accepts MP4, AVI, MOV, and MKV video uploads.
+- Extracts face frames from video using MTCNN.
+- Uses a sequence model to classify the uploaded video as **Real** or **Fake**.
+- Displays model confidence, face quality, frame consistency, and a progress indicator during analysis.
+
+## Project structure
+- `app.py`: Flask web server, upload and analysis routes, progress API.
+- `model.py`: Model building, video frame extraction, and prediction logic.
+- `templates/`: HTML templates for the welcome, upload, about, and analytics pages.
+- `static/`: CSS, JavaScript, and image assets.
+- `deepfake_model.h5`, `deepfake_detector_advanced_v2.h5`: Trained model weights used by the application.
 
 ## Setup
-1. Install the required dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Run the detector:
-```bash
-python deepfake_detector.py
-```
-
-## Usage
-```python
-from deepfake_detector import DeepFakeDetector
-
-# Initialize the detector
-detector = DeepFakeDetector()
-
-# Analyze an image
-result = detector.predict('path_to_image.jpg')
-print(f"Probability of being fake: {result:.2f}")
-
-# Analyze a video
-video_result = detector.analyze_video('path_to_video.mp4')
-print(f"Average probability of video being fake: {video_result:.2f}")
-```
-
-## Running the Application Manually
-
-1. **Clone the repository** (if not already done):
-   ```bash
-   git clone <repository-url>
-   cd New DeepFake
-   ```
-
-2. **Install the required dependencies**:
+1. Create and activate a Python environment.
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
+
+## Run the app
+From the project root:
+```bash
+python app.py
+```
+Then open `http://127.0.0.1:5000` in your browser.
+
+## Usage
+1. Open the main page.
+2. Click **Start Detecting**.
+3. Upload a video file.
+4. Click **Analyze Video**.
+5. Watch the progress bar and see the final classification result.
+
+## Notes
+- The app uses only CPU by default on native Windows for TensorFlow 2.12+.
+- The upload page is the correct analysis entry point; the welcome page only introduces the workflow.
+- The About page now links to the upload page rather than a missing `/detect` route.
+
+## Requirements
+The project depends on:
+- Flask
+- TensorFlow
+- OpenCV
+- NumPy
+- Pillow
+- Matplotlib
+- scikit-learn
+- MTCNN
+- pandas
+- plotly
 
 3. **Run the Flask application**:
    ```bash
