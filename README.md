@@ -70,3 +70,9 @@ The project depends on:
 
 ## Note
 This implementation uses transfer learning with MobileNetV2 for efficient detection. The model needs to be trained with a dataset of real and fake images/videos for optimal performance.
+
+**And This project was deployed on render.com here is the link
+   ```
+   https://deep-fake-detection-system-68cb.onrender.com
+   ```
+   But there are chances due to free tier limit you might not able to see the full working so please understand
