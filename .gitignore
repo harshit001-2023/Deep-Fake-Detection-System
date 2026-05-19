@@ -22,7 +22,13 @@ var/
 
 # Virtual Environment
 venv/
+.venv/
 ENV/
+
+# Generated files
+*.zip
+2.12.0
+analysis_data.json
 
 # Model files
 *.h5

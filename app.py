@@ -286,8 +286,10 @@ def get_detection_metrics():
         logger.error(f"Error calculating metrics: {e}")
         return {'total_videos': 0, 'avg_confidence': "0.0%"}
 
+# Initialize the application on module import so Render/Gunicorn can start the service.
+if not initialize_app():
+    logger.error("Failed to initialize app")
+    raise RuntimeError("Application initialization failed")
+
 if __name__ == '__main__':
-    if initialize_app():
-        app.run(debug=False, host='0.0.0.0', port=5000)
-    else:
-        logger.error("Failed to initialize app")
+    app.run(debug=False, host='0.0.0.0', port=5000)
